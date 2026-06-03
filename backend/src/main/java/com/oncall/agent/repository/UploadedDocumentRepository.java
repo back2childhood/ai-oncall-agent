@@ -1,0 +1,8 @@
+package com.oncall.agent.repository;
+
+import com.oncall.agent.domain.UploadedDocument;
+import java.util.UUID;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface UploadedDocumentRepository extends JpaRepository<UploadedDocument, UUID> {
+}

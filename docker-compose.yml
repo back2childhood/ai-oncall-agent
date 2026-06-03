@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ai-oncall-postgres
+    environment:
+      POSTGRES_DB: oncall_agent
+      POSTGRES_USER: oncall
+      POSTGRES_PASSWORD: oncall
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oncall -d oncall_agent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  postgres-data:
