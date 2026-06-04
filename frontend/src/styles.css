@@ -138,6 +138,7 @@ h2 {
 }
 
 .upload-form,
+.sync-panel,
 .question-form,
 .answer-surface,
 .citations {
@@ -203,9 +204,11 @@ input[type="number"] {
 .document-list {
   display: grid;
   gap: 10px;
+  margin-bottom: 16px;
 }
 
 .doc-item,
+.sync-run,
 .citation {
   padding: 13px;
   border: 1px solid #d8dee5;
@@ -213,19 +216,22 @@ input[type="number"] {
   background: #ffffff;
 }
 
-.doc-item {
+.doc-item,
+.sync-run {
   display: flex;
   justify-content: space-between;
   gap: 12px;
 }
 
 .doc-item strong,
+.sync-run strong,
 .citation strong {
   display: block;
   overflow-wrap: anywhere;
 }
 
 .doc-item span,
+.sync-run span,
 .empty,
 .citation small {
   color: #667085;
@@ -253,6 +259,44 @@ input[type="number"] {
 .badge.failed {
   background: #ffe9e3;
   color: #8a391b;
+}
+
+.badge.success {
+  background: #e7f6ee;
+  color: #07633f;
+}
+
+.badge.skipped {
+  background: #eef2f6;
+  color: #475467;
+}
+
+.sync-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.flag {
+  padding: 5px 8px;
+  border: 1px solid #d8dee5;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.flag.on {
+  border-color: #b7e2d6;
+  background: #e7f6ee;
+  color: #07633f;
+}
+
+.sync-runs {
+  display: grid;
+  gap: 10px;
 }
 
 .question-box {

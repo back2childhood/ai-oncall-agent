@@ -24,6 +24,10 @@ public class DocumentParserService {
         return splitByHeadings(text, file.getOriginalFilename());
     }
 
+    public List<ParsedSection> parseTextSections(String text, String filename) {
+        return splitByHeadings(normalize(text), filename);
+    }
+
     private String extractText(MultipartFile file) {
         try (InputStream input = file.getInputStream()) {
             ContentHandler handler = new BodyContentHandler(-1);

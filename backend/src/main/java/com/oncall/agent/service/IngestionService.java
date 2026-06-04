@@ -39,12 +39,29 @@ public class IngestionService {
 
     @Transactional
     public DocumentResponse ingest(MultipartFile file, String sourceType) {
+        return ingestSections(
+                file.getOriginalFilename() == null ? "upload" : file.getOriginalFilename(),
+                file.getContentType(),
+                sourceType,
+                parserService.parseSections(file));
+    }
+
+    @Transactional
+    public UUID ingestText(String filename, String contentType, String sourceType, String text) {
+        return ingestSections(filename, contentType, sourceType, parserService.parseTextSections(text, filename)).id();
+    }
+
+    private DocumentResponse ingestSections(
+            String filename,
+            String contentType,
+            String sourceType,
+            List<ParsedSection> sections) {
         UUID documentId = UUID.randomUUID();
         Instant now = Instant.now();
         UploadedDocument uploaded = new UploadedDocument();
         uploaded.setId(documentId);
-        uploaded.setFilename(file.getOriginalFilename() == null ? "upload" : file.getOriginalFilename());
-        uploaded.setContentType(file.getContentType());
+        uploaded.setFilename(filename == null || filename.isBlank() ? "ingested-context" : filename);
+        uploaded.setContentType(contentType);
         uploaded.setSourceType(sourceType == null || sourceType.isBlank() ? "knowledge" : sourceType);
         uploaded.setStatus(DocumentStatus.PROCESSING);
         uploaded.setCreatedAt(now);
@@ -52,14 +69,16 @@ public class IngestionService {
         documentRepository.save(uploaded);
 
         try {
-            List<ChunkCandidate> chunks = chunkingService.chunk(parserService.parseSections(file));
+            List<ChunkCandidate> chunks = chunkingService.chunk(sections);
             List<Document> vectorDocuments = chunks.stream()
                     .map(chunk -> toVectorDocument(uploaded, chunk))
                     .toList();
-            vectorStore.add(vectorDocuments);
-            chunkRepository.saveAll(chunks.stream()
-                    .map(chunk -> toEntity(uploaded.getId(), vectorDocuments.get(chunk.chunkIndex()).getId(), chunk))
-                    .toList());
+            if (!vectorDocuments.isEmpty()) {
+                vectorStore.add(vectorDocuments);
+                chunkRepository.saveAll(chunks.stream()
+                        .map(chunk -> toEntity(uploaded.getId(), vectorDocuments.get(chunk.chunkIndex()).getId(), chunk))
+                        .toList());
+            }
             uploaded.setChunkCount(chunks.size());
             uploaded.setStatus(DocumentStatus.READY);
             uploaded.setUpdatedAt(Instant.now());

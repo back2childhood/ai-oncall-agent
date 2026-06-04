@@ -1,6 +1,6 @@
 import React, { FormEvent, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { AlertTriangle, Bot, Database, FileUp, RefreshCw, Search, Send, UploadCloud } from 'lucide-react';
+import { Activity, AlertTriangle, Bot, Database, FileUp, RefreshCw, Search, Send, UploadCloud } from 'lucide-react';
 import './styles.css';
 
 type DocumentStatus = 'PROCESSING' | 'READY' | 'FAILED';
@@ -31,6 +31,27 @@ type ChatResponse = {
   citations: Citation[];
 };
 
+type SyncStatus = 'SUCCESS' | 'FAILED' | 'SKIPPED';
+
+type OperationalSyncRun = {
+  id: string;
+  source: string;
+  status: SyncStatus;
+  itemCount: number;
+  documentId?: string;
+  message?: string;
+  startedAt: string;
+  finishedAt: string;
+};
+
+type OperationalSyncSummary = {
+  syncEnabled: boolean;
+  prometheusEnabled: boolean;
+  mcpLogsEnabled: boolean;
+  fixedDelayMs: number;
+  recentRuns: OperationalSyncRun[];
+};
+
 const api = {
   async listDocuments(): Promise<UploadedDocument[]> {
     const response = await fetch('/api/documents');
@@ -51,6 +72,16 @@ const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, topK })
     });
+    if (!response.ok) throw new Error(await errorText(response));
+    return response.json();
+  },
+  async syncSummary(): Promise<OperationalSyncSummary> {
+    const response = await fetch('/api/operations/sync');
+    if (!response.ok) throw new Error(await errorText(response));
+    return response.json();
+  },
+  async syncNow(): Promise<OperationalSyncRun[]> {
+    const response = await fetch('/api/operations/sync', { method: 'POST' });
     if (!response.ok) throw new Error(await errorText(response));
     return response.json();
   }
@@ -75,6 +106,8 @@ function App() {
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [asking, setAsking] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncSummary, setSyncSummary] = useState<OperationalSyncSummary | null>(null);
   const [error, setError] = useState('');
 
   const readyChunks = useMemo(
@@ -94,8 +127,17 @@ function App() {
     }
   }
 
+  async function refreshSyncSummary() {
+    try {
+      setSyncSummary(await api.syncSummary());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load sync status');
+    }
+  }
+
   useEffect(() => {
     refreshDocuments();
+    refreshSyncSummary();
   }, []);
 
   async function handleUpload(event: FormEvent) {
@@ -125,6 +167,20 @@ function App() {
       setError(err instanceof Error ? err.message : 'Question failed');
     } finally {
       setAsking(false);
+    }
+  }
+
+  async function handleSyncNow() {
+    setSyncing(true);
+    setError('');
+    try {
+      await api.syncNow();
+      await refreshSyncSummary();
+      await refreshDocuments();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Operational sync failed');
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -194,6 +250,32 @@ function App() {
             ))}
             {!documents.length && <p className="empty">No uploaded context yet.</p>}
           </div>
+
+          <section className="sync-panel">
+            <div className="panel-head">
+              <h2>Live Signals</h2>
+              <button className="icon-button" onClick={handleSyncNow} disabled={syncing} title="Sync alerts and logs now">
+                <Activity size={18} />
+              </button>
+            </div>
+            <div className="sync-flags">
+              <span className={syncSummary?.syncEnabled ? 'flag on' : 'flag'}>Scheduler</span>
+              <span className={syncSummary?.prometheusEnabled ? 'flag on' : 'flag'}>Prometheus</span>
+              <span className={syncSummary?.mcpLogsEnabled ? 'flag on' : 'flag'}>MCP logs</span>
+            </div>
+            <div className="sync-runs">
+              {syncSummary?.recentRuns.slice(0, 6).map((run) => (
+                <article className="sync-run" key={run.id}>
+                  <div>
+                    <strong>{run.source}</strong>
+                    <span>{run.message ?? 'No message'}</span>
+                  </div>
+                  <StatusPill status={run.status} count={run.itemCount} />
+                </article>
+              ))}
+              {!syncSummary?.recentRuns.length && <p className="empty">No live sync runs yet.</p>}
+            </div>
+          </section>
         </aside>
 
         <section className="chat">
@@ -264,6 +346,10 @@ function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; 
 
 function StatusBadge({ status }: { status: DocumentStatus }) {
   return <span className={`badge ${status.toLowerCase()}`}>{status}</span>;
+}
+
+function StatusPill({ status, count }: { status: SyncStatus; count: number }) {
+  return <span className={`badge ${status.toLowerCase()}`}>{status} · {count}</span>;
 }
 
 createRoot(document.getElementById('root')!).render(<App />);
