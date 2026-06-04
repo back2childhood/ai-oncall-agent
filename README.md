@@ -9,10 +9,26 @@ A Spring Boot + React RAG application for on-call developers. It ingests code, l
 - Storage: PostgreSQL + pgvector
 - AI: OpenAI chat and embedding models through Spring AI
 
-## Run
+## Run With Docker
 
 ```bash
-docker compose up -d
+cp .env.example .env
+# edit .env and set OPENAI_API_KEY
+docker compose up --build
+```
+
+Open `http://localhost:3000`.
+
+The compose stack starts:
+
+- `postgres`: PostgreSQL with pgvector
+- `backend`: Spring Boot API on `http://localhost:8080`
+- `frontend`: Nginx-served React app on `http://localhost:3000`
+
+## Run Locally
+
+```bash
+docker compose up -d postgres
 export OPENAI_API_KEY=your_key_here
 export PROMETHEUS_ENABLED=true
 export PROMETHEUS_BASE_URL=http://localhost:9090
