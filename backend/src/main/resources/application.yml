@@ -52,5 +52,15 @@ app:
     mcp-logs:
       enabled: ${MCP_LOGS_ENABLED:false}
       endpoint: ${MCP_LOGS_ENDPOINT:http://localhost:8081/mcp/logs/query}
+      auth-header: ${MCP_LOGS_AUTH_HEADER:}
+      auth-token: ${MCP_LOGS_AUTH_TOKEN:}
       query: ${MCP_LOGS_QUERY:error OR exception OR timeout OR failed}
       limit: ${MCP_LOGS_LIMIT:200}
+      request-template: ${MCP_LOGS_REQUEST_TEMPLATE:__DEFAULT__}
+      response:
+        logs-path: ${MCP_LOGS_RESPONSE_LOGS_PATH:logs}
+        timestamp-fields: ${MCP_LOGS_RESPONSE_TIMESTAMP_FIELDS:timestamp,time,ts}
+        service-fields: ${MCP_LOGS_RESPONSE_SERVICE_FIELDS:service,app,source}
+        level-fields: ${MCP_LOGS_RESPONSE_LEVEL_FIELDS:level,severity}
+        message-fields: ${MCP_LOGS_RESPONSE_MESSAGE_FIELDS:message,msg,line}
+        attributes-path: ${MCP_LOGS_RESPONSE_ATTRIBUTES_PATH:attributes}

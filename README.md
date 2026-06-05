@@ -62,7 +62,40 @@ Open `http://localhost:5173`.
 The app can continuously read operational signals and index them into the same RAG store as uploaded documents.
 
 - Prometheus alerts: `GET {PROMETHEUS_BASE_URL}/api/v1/alerts`
-- MCP logs: `POST {MCP_LOGS_ENDPOINT}` with `{ "query", "since", "until", "limit" }`
+- MCP logs: `POST {MCP_LOGS_ENDPOINT}` with a request body defined by `MCP_LOGS_REQUEST_TEMPLATE`
+
+## Custom MCP Log Format
+
+This project does not use a public MCP website by default. `http://mcp-logs:8081/mcp/logs/query` is only a Docker-network placeholder for a log MCP service that you run or receive from your class/team. To get an endpoint, deploy your own MCP/log-query HTTP service, then set `MCP_LOGS_ENDPOINT` to that service URL.
+
+The backend can adapt to your request and response shape through environment variables:
+
+```bash
+MCP_LOGS_ENDPOINT=http://your-mcp-service:8081/mcp/logs/query
+MCP_LOGS_AUTH_HEADER=Authorization
+MCP_LOGS_AUTH_TOKEN=Bearer your_token
+MCP_LOGS_REQUEST_TEMPLATE={"query":"${query}","since":"${since}","until":"${until}","limit":${limit}}
+MCP_LOGS_RESPONSE_LOGS_PATH=logs
+MCP_LOGS_RESPONSE_TIMESTAMP_FIELDS=timestamp,time,ts
+MCP_LOGS_RESPONSE_SERVICE_FIELDS=service,app,source
+MCP_LOGS_RESPONSE_LEVEL_FIELDS=level,severity
+MCP_LOGS_RESPONSE_MESSAGE_FIELDS=message,msg,line
+MCP_LOGS_RESPONSE_ATTRIBUTES_PATH=attributes
+```
+
+For example, if your MCP response is `{ "data": { "items": [...] } }`, set:
+
+```bash
+MCP_LOGS_RESPONSE_LOGS_PATH=data.items
+```
+
+If each log uses `body` instead of `message`, set:
+
+```bash
+MCP_LOGS_RESPONSE_MESSAGE_FIELDS=body,message,msg,line
+```
+
+Template placeholders available in `MCP_LOGS_REQUEST_TEMPLATE`: `${query}`, `${since}`, `${until}`, `${limit}`.
 
 Useful environment variables:
 
@@ -78,8 +111,17 @@ PROMETHEUS_ENABLED=true
 PROMETHEUS_BASE_URL=http://localhost:9090
 MCP_LOGS_ENABLED=true
 MCP_LOGS_ENDPOINT=http://localhost:8081/mcp/logs/query
+MCP_LOGS_AUTH_HEADER=
+MCP_LOGS_AUTH_TOKEN=
 MCP_LOGS_QUERY="error OR exception OR timeout OR failed"
 MCP_LOGS_LIMIT=200
+MCP_LOGS_REQUEST_TEMPLATE={"query":"${query}","since":"${since}","until":"${until}","limit":${limit}}
+MCP_LOGS_RESPONSE_LOGS_PATH=logs
+MCP_LOGS_RESPONSE_TIMESTAMP_FIELDS=timestamp,time,ts
+MCP_LOGS_RESPONSE_SERVICE_FIELDS=service,app,source
+MCP_LOGS_RESPONSE_LEVEL_FIELDS=level,severity
+MCP_LOGS_RESPONSE_MESSAGE_FIELDS=message,msg,line
+MCP_LOGS_RESPONSE_ATTRIBUTES_PATH=attributes
 ```
 
 Each sync run is recorded in Postgres. Non-empty snapshots are chunked, embedded, and stored in pgvector as `alert` or `logs` source documents, so user questions can cite current operational context.
