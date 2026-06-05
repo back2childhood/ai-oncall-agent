@@ -13,7 +13,7 @@ A Spring Boot + React RAG application for on-call developers. It ingests code, l
 
 ```bash
 cp .env.example .env
-# edit .env and set OPENAI_API_KEY
+# edit .env and set OPENAI_API_KEY, OPENAI_BASE_URL, and model names
 docker compose up --build
 ```
 
@@ -30,6 +30,7 @@ The compose stack starts:
 ```bash
 docker compose up -d postgres
 export OPENAI_API_KEY=your_key_here
+export OPENAI_BASE_URL=https://api.openai.com
 export PROMETHEUS_ENABLED=true
 export PROMETHEUS_BASE_URL=http://localhost:9090
 export MCP_LOGS_ENABLED=true
@@ -66,6 +67,10 @@ The app can continuously read operational signals and index them into the same R
 Useful environment variables:
 
 ```bash
+OPENAI_API_KEY=your_key_here
+OPENAI_BASE_URL=https://api.openai.com
+OPENAI_CHAT_MODEL=gpt-4.1-mini
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 OPERATIONS_SYNC_ENABLED=true
 OPERATIONS_SYNC_FIXED_DELAY_MS=60000
 OPERATIONS_LOGS_LOOKBACK_MINUTES=15
