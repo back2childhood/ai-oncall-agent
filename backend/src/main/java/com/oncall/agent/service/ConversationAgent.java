@@ -21,14 +21,17 @@ public class ConversationAgent {
 
     private final RetrievalService retrievalService;
     private final ChatClient chatClient;
+    private final ClassroomLlmClient classroomLlmClient;
     private final boolean demoMode;
 
     public ConversationAgent(
             RetrievalService retrievalService,
             ChatClient chatClient,
+            ClassroomLlmClient classroomLlmClient,
             @Value("${app.demo-mode}") boolean demoMode) {
         this.retrievalService = retrievalService;
         this.chatClient = chatClient;
+        this.classroomLlmClient = classroomLlmClient;
         this.demoMode = demoMode;
     }
 
@@ -36,7 +39,9 @@ public class ConversationAgent {
         List<RetrievedChunk> chunks = retrievalService.retrieve(question, topK);
         String context = buildContext(chunks);
         String answer;
-        if (demoMode) {
+        if (classroomLlmClient.isEnabled()) {
+            answer = classroomLlmClient.generate(classroomPrompt(question, context));
+        } else if (demoMode) {
             answer = demoAnswer(question, chunks, context);
         } else {
             answer = chatClient.prompt()
@@ -52,6 +57,13 @@ public class ConversationAgent {
                     .content();
         }
         return new ChatResponse(answer, chunks.stream().map(this::toCitation).toList());
+    }
+
+    private String classroomPrompt(String question, String context) {
+        return SYSTEM_PROMPT + "\n\n"
+                + "Question:\n" + question + "\n\n"
+                + "Retrieved context from the vector/knowledge store:\n" + context + "\n"
+                + "Answer in a concise on-call style. Include likely cause, evidence, next checks, remediation, and cite filenames or source titles when available.";
     }
 
     private String demoAnswer(String question, List<RetrievedChunk> chunks, String context) {

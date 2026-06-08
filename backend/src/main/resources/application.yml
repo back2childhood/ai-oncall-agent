@@ -37,6 +37,12 @@ spring:
 
 app:
   demo-mode: ${DEMO_MODE:false}
+  classroom-llm:
+    enabled: ${CLASSROOM_LLM_ENABLED:false}
+    endpoint: ${CLASSROOM_LLM_ENDPOINT:https://4dm65e698a.execute-api.us-west-2.amazonaws.com/prod/invoke}
+    api-key: ${CLASSROOM_LLM_API_KEY:${OPENAI_API_KEY:}}
+    model: ${CLASSROOM_LLM_MODEL:claude-sonnet-4.5}
+    max-tokens: ${CLASSROOM_LLM_MAX_TOKENS:768}
   retrieval:
     top-k: ${RETRIEVAL_TOP_K:8}
     candidate-k: ${RETRIEVAL_CANDIDATE_K:24}

@@ -19,6 +19,21 @@ The backend is split into two agent-style services:
 This keeps user-facing reasoning separate from background alert/log processing while sharing the same knowledge base and vector store.
 
 
+
+## Classroom Claude Endpoint
+
+The project can call the classroom Bedrock text-generation endpoint directly for final answers:
+
+```bash
+CLASSROOM_LLM_ENABLED=true
+CLASSROOM_LLM_ENDPOINT=https://4dm65e698a.execute-api.us-west-2.amazonaws.com/prod/invoke
+CLASSROOM_LLM_API_KEY=your_classroom_api_key
+CLASSROOM_LLM_MODEL=claude-sonnet-4.5
+CLASSROOM_LLM_MAX_TOKENS=768
+```
+
+The classroom endpoint uses `x-api-key` and a request body shaped like `{ "model", "input", "maxTokens" }`. This is separate from OpenAI-compatible embeddings. If `DEMO_MODE=true`, retrieval uses local keyword matching while the Conversation Agent can still use the classroom Claude endpoint for generated answers.
+
 ## Demo Mode For Local Testing
 
 Set `DEMO_MODE=true` in `.env` when you need to test the product flow without a compatible embedding or chat endpoint. In demo mode:
