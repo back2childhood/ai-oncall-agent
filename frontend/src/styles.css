@@ -410,6 +410,7 @@ textarea {
   color: #0b6b59;
   font-size: 13px;
   font-weight: 900;
+  white-space: nowrap;
 }
 
 @media (max-width: 860px) {

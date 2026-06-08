@@ -322,7 +322,7 @@ function App() {
                 <article className="citation" key={`${citation.documentId}-${citation.chunkIndex}`}>
                   <div className="citation-top">
                     <strong>{citation.filename}</strong>
-                    <span>{citation.score.toFixed(3)}</span>
+                    <span title="Retrieval rerank score">Score {citation.score.toFixed(3)}</span>
                   </div>
                   <p>{citation.title}</p>
                   <small>{citation.preview}</small>
