@@ -9,6 +9,15 @@ A Spring Boot + React RAG application for on-call developers. It ingests code, l
 - Storage: PostgreSQL + pgvector
 - AI: OpenAI chat and embedding models through Spring AI
 
+## Agent Architecture
+
+The backend is split into two agent-style services:
+
+- **Conversation Agent**: receives user questions, retrieves related chunks from pgvector through `RetrievalService`, reranks them, sends grounded context to the LLM, and returns an answer with citations.
+- **Operations Agent**: processes operational signals from Prometheus alerts and MCP log queries, converts them into text snapshots, chunks/embeds them, and stores them in the same vector database for later diagnosis.
+
+This keeps user-facing reasoning separate from background alert/log processing while sharing the same knowledge base and vector store.
+
 ## Run With Docker
 
 ```bash

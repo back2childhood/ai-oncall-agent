@@ -207,7 +207,7 @@ function App() {
       <section className="workspace">
         <aside className="ingestion">
           <div className="panel-head">
-            <h2>Knowledge</h2>
+            <h2>Knowledge Base</h2>
             <button className="icon-button" onClick={refreshDocuments} disabled={loadingDocs} title="Refresh documents">
               <RefreshCw size={18} />
             </button>
@@ -253,7 +253,7 @@ function App() {
 
           <section className="sync-panel">
             <div className="panel-head">
-              <h2>Live Signals</h2>
+              <h2>Operations Agent</h2>
               <button className="icon-button" onClick={handleSyncNow} disabled={syncing} title="Sync alerts and logs now">
                 <Activity size={18} />
               </button>
@@ -307,14 +307,14 @@ function App() {
           </form>
 
           <div className="answer-surface">
-            <h2>Answer</h2>
+            <h2>Conversation Agent Answer</h2>
             <div className="answer-text">
               {answer ? answer.answer : 'Ask an incident question after uploading context.'}
             </div>
           </div>
 
           <div className="citations">
-            <h2>Citations</h2>
+            <h2>Vector DB Citations</h2>
             <div className="citation-grid">
               {answer?.citations.map((citation) => (
                 <article className="citation" key={`${citation.documentId}-${citation.chunkIndex}`}>

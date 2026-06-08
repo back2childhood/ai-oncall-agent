@@ -1,124 +1,31 @@
 package com.oncall.agent.service;
 
-import com.oncall.agent.domain.OperationalSyncRun;
-import com.oncall.agent.domain.SyncStatus;
 import com.oncall.agent.dto.OperationalSyncResponse;
 import com.oncall.agent.dto.OperationalSyncSummary;
-import com.oncall.agent.repository.OperationalSyncRunRepository;
-import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 @Service
 public class OperationalSyncService {
-    private final PrometheusAlertClient prometheusAlertClient;
-    private final McpLogClient mcpLogClient;
-    private final IngestionService ingestionService;
-    private final OperationalSyncRunRepository syncRunRepository;
-    private final boolean syncEnabled;
-    private final long fixedDelayMs;
+    private final OperationsAgent operationsAgent;
 
-    public OperationalSyncService(
-            PrometheusAlertClient prometheusAlertClient,
-            McpLogClient mcpLogClient,
-            IngestionService ingestionService,
-            OperationalSyncRunRepository syncRunRepository,
-            @Value("${app.operations.sync-enabled}") boolean syncEnabled,
-            @Value("${app.operations.fixed-delay-ms}") long fixedDelayMs) {
-        this.prometheusAlertClient = prometheusAlertClient;
-        this.mcpLogClient = mcpLogClient;
-        this.ingestionService = ingestionService;
-        this.syncRunRepository = syncRunRepository;
-        this.syncEnabled = syncEnabled;
-        this.fixedDelayMs = fixedDelayMs;
+    public OperationalSyncService(OperationsAgent operationsAgent) {
+        this.operationsAgent = operationsAgent;
     }
 
     @Scheduled(fixedDelayString = "${app.operations.fixed-delay-ms}")
     public void scheduledSync() {
-        if (syncEnabled) {
-            syncNow();
+        if (operationsAgent.isSyncEnabled()) {
+            operationsAgent.processSignalsNow();
         }
     }
 
     public List<OperationalSyncResponse> syncNow() {
-        return List.of(
-                syncSnapshot("prometheus", prometheusAlertClient::fetchAlerts, prometheusAlertClient.isEnabled()),
-                syncSnapshot("mcp-logs", mcpLogClient::queryLogs, mcpLogClient.isEnabled()));
+        return operationsAgent.processSignalsNow();
     }
 
     public OperationalSyncSummary summary() {
-        return new OperationalSyncSummary(
-                syncEnabled,
-                prometheusAlertClient.isEnabled(),
-                mcpLogClient.isEnabled(),
-                fixedDelayMs,
-                syncRunRepository.findTop20ByOrderByStartedAtDesc().stream()
-                        .map(this::toResponse)
-                        .toList());
-    }
-
-    private OperationalSyncResponse syncSnapshot(String source, SnapshotSupplier supplier, boolean sourceEnabled) {
-        Instant started = Instant.now();
-        OperationalSyncRun run = new OperationalSyncRun();
-        run.setId(UUID.randomUUID());
-        run.setSource(source);
-        run.setStartedAt(started);
-
-        try {
-            if (!sourceEnabled) {
-                run.setStatus(SyncStatus.SKIPPED);
-                run.setItemCount(0);
-                run.setMessage(source + " sync is disabled");
-                return save(run);
-            }
-
-            OperationalSnapshot snapshot = supplier.get();
-            run.setItemCount(snapshot.itemCount());
-            if (snapshot.isEmpty()) {
-                run.setStatus(SyncStatus.SKIPPED);
-                run.setMessage("No new " + source + " items found");
-                return save(run);
-            }
-
-            UUID documentId = ingestionService.ingestText(
-                    snapshot.filename(),
-                    "text/plain",
-                    snapshot.sourceType(),
-                    snapshot.content());
-            run.setDocumentId(documentId);
-            run.setStatus(SyncStatus.SUCCESS);
-            run.setMessage("Indexed " + snapshot.itemCount() + " " + source + " items");
-            return save(run);
-        } catch (RuntimeException ex) {
-            run.setStatus(SyncStatus.FAILED);
-            run.setItemCount(0);
-            run.setMessage(ex.getMessage());
-            return save(run);
-        }
-    }
-
-    private OperationalSyncResponse save(OperationalSyncRun run) {
-        run.setFinishedAt(Instant.now());
-        return toResponse(syncRunRepository.save(run));
-    }
-
-    private OperationalSyncResponse toResponse(OperationalSyncRun run) {
-        return new OperationalSyncResponse(
-                run.getId(),
-                run.getSource(),
-                run.getStatus(),
-                run.getItemCount(),
-                run.getDocumentId(),
-                run.getMessage(),
-                run.getStartedAt(),
-                run.getFinishedAt());
-    }
-
-    @FunctionalInterface
-    private interface SnapshotSupplier {
-        OperationalSnapshot get();
+        return operationsAgent.summary();
     }
 }
