@@ -14,6 +14,7 @@ type UploadedDocument = {
   chunkCount: number;
   errorMessage?: string;
   createdAt: string;
+  exists?: boolean;
 };
 
 type Citation = {
@@ -146,8 +147,11 @@ function App() {
     setUploading(true);
     setError('');
     try {
-      await api.upload(selectedFile, sourceType);
+      const uploaded = await api.upload(selectedFile, sourceType);
       setSelectedFile(null);
+      if (uploaded.exists) {
+        setError(`${uploaded.filename} already exists, skipped upload.`);
+      }
       await refreshDocuments();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');

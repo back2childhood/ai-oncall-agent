@@ -60,13 +60,26 @@ public class IngestionService {
             String contentType,
             String sourceType,
             List<ParsedSection> sections) {
+        String normalizedFilename = filename == null || filename.isBlank() ? "ingested-context" : filename;
+        String normalizedSourceType = sourceType == null || sourceType.isBlank() ? "knowledge" : sourceType;
+        return documentRepository.findFirstByFilenameAndSourceTypeAndStatusOrderByCreatedAtDesc(
+                        normalizedFilename, normalizedSourceType, DocumentStatus.READY)
+                .map(existing -> toResponse(existing, true))
+                .orElseGet(() -> ingestNewSections(normalizedFilename, contentType, normalizedSourceType, sections));
+    }
+
+    private DocumentResponse ingestNewSections(
+            String filename,
+            String contentType,
+            String sourceType,
+            List<ParsedSection> sections) {
         UUID documentId = UUID.randomUUID();
         Instant now = Instant.now();
         UploadedDocument uploaded = new UploadedDocument();
         uploaded.setId(documentId);
-        uploaded.setFilename(filename == null || filename.isBlank() ? "ingested-context" : filename);
+        uploaded.setFilename(filename);
         uploaded.setContentType(contentType);
-        uploaded.setSourceType(sourceType == null || sourceType.isBlank() ? "knowledge" : sourceType);
+        uploaded.setSourceType(sourceType);
         uploaded.setStatus(DocumentStatus.PROCESSING);
         uploaded.setCreatedAt(now);
         uploaded.setUpdatedAt(now);
@@ -135,6 +148,10 @@ public class IngestionService {
     }
 
     private DocumentResponse toResponse(UploadedDocument document) {
+        return toResponse(document, false);
+    }
+
+    private DocumentResponse toResponse(UploadedDocument document, boolean exists) {
         return new DocumentResponse(
                 document.getId(),
                 document.getFilename(),
@@ -143,6 +160,7 @@ public class IngestionService {
                 document.getStatus(),
                 document.getChunkCount(),
                 document.getErrorMessage(),
-                document.getCreatedAt());
+                document.getCreatedAt(),
+                exists);
     }
 }

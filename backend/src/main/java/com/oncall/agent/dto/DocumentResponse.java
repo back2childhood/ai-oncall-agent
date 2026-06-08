@@ -12,6 +12,7 @@ public record DocumentResponse(
         DocumentStatus status,
         int chunkCount,
         String errorMessage,
-        Instant createdAt
+        Instant createdAt,
+        boolean exists
 ) {
 }
