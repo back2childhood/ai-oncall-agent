@@ -18,6 +18,17 @@ The backend is split into two agent-style services:
 
 This keeps user-facing reasoning separate from background alert/log processing while sharing the same knowledge base and vector store.
 
+
+## Demo Mode For Local Testing
+
+Set `DEMO_MODE=true` in `.env` when you need to test the product flow without a compatible embedding or chat endpoint. In demo mode:
+
+- uploads are parsed, chunked, and saved as metadata without calling external embeddings
+- retrieval uses local keyword scoring over uploaded chunks
+- the Conversation Agent returns a grounded deterministic answer with citations
+
+This is useful for classroom demos and local tests. Set `DEMO_MODE=false` when a real OpenAI-compatible chat and embedding provider is ready.
+
 ## Run With Docker
 
 ```bash

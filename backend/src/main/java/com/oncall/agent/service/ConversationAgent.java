@@ -4,6 +4,7 @@ import com.oncall.agent.dto.ChatResponse;
 import com.oncall.agent.dto.Citation;
 import java.util.List;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -20,27 +21,54 @@ public class ConversationAgent {
 
     private final RetrievalService retrievalService;
     private final ChatClient chatClient;
+    private final boolean demoMode;
 
-    public ConversationAgent(RetrievalService retrievalService, ChatClient chatClient) {
+    public ConversationAgent(
+            RetrievalService retrievalService,
+            ChatClient chatClient,
+            @Value("${app.demo-mode}") boolean demoMode) {
         this.retrievalService = retrievalService;
         this.chatClient = chatClient;
+        this.demoMode = demoMode;
     }
 
     public ChatResponse answer(String question, Integer topK) {
         List<RetrievedChunk> chunks = retrievalService.retrieve(question, topK);
         String context = buildContext(chunks);
-        String answer = chatClient.prompt()
-                .system(SYSTEM_PROMPT)
-                .user("""
-                        Question:
-                        %s
+        String answer;
+        if (demoMode) {
+            answer = demoAnswer(question, chunks, context);
+        } else {
+            answer = chatClient.prompt()
+                    .system(SYSTEM_PROMPT)
+                    .user("""
+                            Question:
+                            %s
 
-                        Retrieved context:
-                        %s
-                        """.formatted(question, context))
-                .call()
-                .content();
+                            Retrieved context:
+                            %s
+                            """.formatted(question, context))
+                    .call()
+                    .content();
+        }
         return new ChatResponse(answer, chunks.stream().map(this::toCitation).toList());
+    }
+
+    private String demoAnswer(String question, List<RetrievedChunk> chunks, String context) {
+        if (chunks.isEmpty()) {
+            return "Demo mode answer: I could not find matching uploaded context. Upload one or more runbooks from aiops-docs, then ask about CPU, memory, disk, service unavailable, or slow response alerts.";
+        }
+
+        RetrievedChunk best = chunks.getFirst();
+        return "Demo mode answer from the Conversation Agent.\n\n"
+                + "Question: " + question + "\n\n"
+                + "Most relevant source: "
+                + (best.document() == null ? "unknown" : best.document().getFilename())
+                + " / " + best.chunk().getTitle() + "\n\n"
+                + "Likely reason and next steps are based on the retrieved runbook context. "
+                + "Start by checking the alert time window, then query related logs, review Prometheus metrics, identify common causes, apply safe remediation, and verify recovery.\n\n"
+                + "Retrieved evidence preview:\n"
+                + context.substring(0, Math.min(context.length(), 1400));
     }
 
     private String buildContext(List<RetrievedChunk> chunks) {

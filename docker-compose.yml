@@ -28,6 +28,7 @@ services:
       DATABASE_URL: jdbc:postgresql://postgres:5432/oncall_agent
       DATABASE_USERNAME: ${DATABASE_USERNAME:-oncall}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:-oncall}
+      DEMO_MODE: ${DEMO_MODE:-false}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com}
       OPENAI_CHAT_MODEL: ${OPENAI_CHAT_MODEL:-gpt-4.1-mini}

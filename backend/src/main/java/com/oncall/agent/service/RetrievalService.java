@@ -25,23 +25,29 @@ public class RetrievalService {
     private final UploadedDocumentRepository documentRepository;
     private final int defaultTopK;
     private final int candidateK;
+    private final boolean demoMode;
 
     public RetrievalService(
             VectorStore vectorStore,
             DocumentChunkRepository chunkRepository,
             UploadedDocumentRepository documentRepository,
             @Value("${app.retrieval.top-k}") int defaultTopK,
-            @Value("${app.retrieval.candidate-k}") int candidateK) {
+            @Value("${app.retrieval.candidate-k}") int candidateK,
+            @Value("${app.demo-mode}") boolean demoMode) {
         this.vectorStore = vectorStore;
         this.chunkRepository = chunkRepository;
         this.documentRepository = documentRepository;
         this.defaultTopK = defaultTopK;
         this.candidateK = candidateK;
+        this.demoMode = demoMode;
     }
 
     @Transactional(readOnly = true)
     public List<RetrievedChunk> retrieve(String question, Integer requestedTopK) {
         int topK = requestedTopK == null || requestedTopK < 1 ? defaultTopK : Math.min(requestedTopK, 20);
+        if (demoMode) {
+            return retrieveWithKeywords(question, topK);
+        }
         int candidates = Math.max(candidateK, topK);
         List<Document> vectorHits = vectorStore.similaritySearch(SearchRequest.builder()
                 .query(question)
@@ -63,6 +69,26 @@ public class RetrievalService {
         return vectorHits.stream()
                 .map(hit -> toRetrieved(question, hit, chunksByVectorId, documentsById))
                 .filter(item -> item != null)
+                .sorted(Comparator.comparingDouble(RetrievedChunk::rerankScore).reversed())
+                .limit(topK)
+                .toList();
+    }
+
+    private List<RetrievedChunk> retrieveWithKeywords(String question, int topK) {
+        List<DocumentChunkEntity> chunks = chunkRepository.findAll();
+        Map<java.util.UUID, UploadedDocument> documentsById = new HashMap<>();
+        documentRepository.findAllById(chunks.stream()
+                        .map(DocumentChunkEntity::getDocumentId)
+                        .toList())
+                .forEach(document -> documentsById.put(document.getId(), document));
+
+        return chunks.stream()
+                .map(chunk -> new RetrievedChunk(
+                        chunk,
+                        documentsById.get(chunk.getDocumentId()),
+                        0.0,
+                        keywordBoost(question, chunk)))
+                .filter(item -> item.rerankScore() > 0.0)
                 .sorted(Comparator.comparingDouble(RetrievedChunk::rerankScore).reversed())
                 .limit(topK)
                 .toList();

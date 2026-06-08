@@ -36,6 +36,7 @@ spring:
         table-name: vector_store
 
 app:
+  demo-mode: ${DEMO_MODE:false}
   retrieval:
     top-k: ${RETRIEVAL_TOP_K:8}
     candidate-k: ${RETRIEVAL_CANDIDATE_K:24}

@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,18 +24,21 @@ public class IngestionService {
     private final DocumentParserService parserService;
     private final ChunkingService chunkingService;
     private final VectorStore vectorStore;
+    private final boolean demoMode;
 
     public IngestionService(
             UploadedDocumentRepository documentRepository,
             DocumentChunkRepository chunkRepository,
             DocumentParserService parserService,
             ChunkingService chunkingService,
-            VectorStore vectorStore) {
+            VectorStore vectorStore,
+            @Value("${app.demo-mode}") boolean demoMode) {
         this.documentRepository = documentRepository;
         this.chunkRepository = chunkRepository;
         this.parserService = parserService;
         this.chunkingService = chunkingService;
         this.vectorStore = vectorStore;
+        this.demoMode = demoMode;
     }
 
     @Transactional
@@ -74,7 +78,9 @@ public class IngestionService {
                     .map(chunk -> toVectorDocument(uploaded, chunk))
                     .toList();
             if (!vectorDocuments.isEmpty()) {
-                vectorStore.add(vectorDocuments);
+                if (!demoMode) {
+                    vectorStore.add(vectorDocuments);
+                }
                 chunkRepository.saveAll(chunks.stream()
                         .map(chunk -> toEntity(uploaded.getId(), vectorDocuments.get(chunk.chunkIndex()).getId(), chunk))
                         .toList());
