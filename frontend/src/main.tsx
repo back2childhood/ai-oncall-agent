@@ -312,9 +312,7 @@ function App() {
 
           <div className="answer-surface">
             <h2>Conversation Agent Answer</h2>
-            <div className="answer-text">
-              {answer ? answer.answer : 'Ask an incident question after uploading context.'}
-            </div>
+            <MarkdownAnswer content={answer ? answer.answer : 'Ask an incident question after uploading context.'} />
           </div>
 
           <div className="citations">
@@ -354,6 +352,116 @@ function StatusBadge({ status }: { status: DocumentStatus }) {
 
 function StatusPill({ status, count }: { status: SyncStatus; count: number }) {
   return <span className={`badge ${status.toLowerCase()}`}>{status} · {count}</span>;
+}
+
+type MarkdownBlock =
+  | { type: 'heading'; level: number; text: string; key: string }
+  | { type: 'paragraph'; text: string; key: string }
+  | { type: 'list'; items: string[]; key: string };
+
+function MarkdownAnswer({ content }: { content: string }) {
+  const blocks = useMemo(() => parseMarkdown(content), [content]);
+  return (
+    <div className="answer-text markdown-answer">
+      {blocks.map((block) => {
+        if (block.type === 'heading') {
+          const HeadingTag = (`h${Math.min(block.level + 2, 5)}` as keyof JSX.IntrinsicElements);
+          return <HeadingTag key={block.key}>{formatInline(block.text)}</HeadingTag>;
+        }
+        if (block.type === 'list') {
+          return (
+            <ul key={block.key}>
+              {block.items.map((item, index) => (
+                <li key={`${block.key}-${index}`}>{formatInline(item)}</li>
+              ))}
+            </ul>
+          );
+        }
+        return <p key={block.key}>{formatInline(block.text)}</p>;
+      })}
+    </div>
+  );
+}
+
+function parseMarkdown(content: string): MarkdownBlock[] {
+  const blocks: MarkdownBlock[] = [];
+  const lines = content.replace(/\r\n/g, '\n').split('\n');
+  let paragraph: string[] = [];
+  let list: string[] = [];
+
+  function flushParagraph() {
+    if (!paragraph.length) return;
+    blocks.push({ type: 'paragraph', text: paragraph.join(' '), key: `p-${blocks.length}` });
+    paragraph = [];
+  }
+
+  function flushList() {
+    if (!list.length) return;
+    blocks.push({ type: 'list', items: list, key: `l-${blocks.length}` });
+    list = [];
+  }
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+
+    const heading = /^(#{1,4})\s+(.+)$/.exec(trimmed);
+    if (heading) {
+      flushParagraph();
+      flushList();
+      blocks.push({
+        type: 'heading',
+        level: heading[1].length,
+        text: heading[2],
+        key: `h-${blocks.length}`
+      });
+      continue;
+    }
+
+    const bullet = /^[-*]\s+(.+)$/.exec(trimmed);
+    if (bullet) {
+      flushParagraph();
+      list.push(bullet[1]);
+      continue;
+    }
+
+    flushList();
+    paragraph.push(trimmed);
+  }
+
+  flushParagraph();
+  flushList();
+  return blocks;
+}
+
+function formatInline(text: string): React.ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  const pattern = /(`[^`]+`|\*\*[^*]+\*\*)/g;
+  let cursor = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > cursor) {
+      nodes.push(text.slice(cursor, match.index));
+    }
+
+    const token = match[0];
+    if (token.startsWith('`')) {
+      nodes.push(<code key={`code-${match.index}`}>{token.slice(1, -1)}</code>);
+    } else {
+      nodes.push(<strong key={`strong-${match.index}`}>{token.slice(2, -2)}</strong>);
+    }
+    cursor = match.index + token.length;
+  }
+
+  if (cursor < text.length) {
+    nodes.push(text.slice(cursor));
+  }
+  return nodes;
 }
 
 createRoot(document.getElementById('root')!).render(<App />);

@@ -61,9 +61,16 @@ public class ConversationAgent {
 
     private String classroomPrompt(String question, String context) {
         return SYSTEM_PROMPT + "\n\n"
+                + "Response rules:\n"
+                + "- Write Markdown that the UI can render.\n"
+                + "- Do not copy the retrieved runbook verbatim. Synthesize it into an incident diagnosis.\n"
+                + "- Separate confirmed evidence from likely hypotheses.\n"
+                + "- If no live logs or metrics are included in the context, clearly say that the answer is based on runbook context only.\n"
+                + "- Keep the answer practical for an on-call engineer.\n"
+                + "- Use these headings exactly: ## Diagnosis, ## Evidence, ## Next Checks, ## Safe Remediation, ## Missing Data.\n\n"
                 + "Question:\n" + question + "\n\n"
                 + "Retrieved context from the vector/knowledge store:\n" + context + "\n"
-                + "Answer in a concise on-call style. Include likely cause, evidence, next checks, remediation, and cite filenames or source titles when available.";
+                + "Now answer the question using the response rules.";
     }
 
     private String demoAnswer(String question, List<RetrievedChunk> chunks, String context) {
