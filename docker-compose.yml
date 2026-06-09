@@ -16,6 +16,17 @@ services:
       timeout: 5s
       retries: 20
 
+  mock-ops:
+    image: python:3.12-alpine
+    container_name: ai-oncall-mock-ops
+    working_dir: /app
+    command: python mock_ops_server.py
+    volumes:
+      - ./mock-ops:/app:ro
+    ports:
+      - "9090:9090"
+      - "8081:8081"
+
   backend:
     build:
       context: .

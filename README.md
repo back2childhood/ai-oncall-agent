@@ -161,6 +161,29 @@ MCP_LOGS_RESPONSE_ATTRIBUTES_PATH=attributes
 
 Each sync run is recorded in Postgres. Non-empty snapshots are chunked, embedded, and stored in pgvector as `alert` or `logs` source documents, so user questions can cite current operational context.
 
+### Local Prometheus and MCP Logs Test
+
+The Docker Compose stack includes a small `mock-ops` service for PC-only testing. It returns one fake Prometheus alert and two fake MCP log entries, so you can test the Operations Agent without a real production environment.
+
+Use these values in `.env`:
+
+```bash
+PROMETHEUS_ENABLED=true
+PROMETHEUS_BASE_URL=http://mock-ops:9090
+PROMETHEUS_ALERTS_PATH=/api/v1/alerts
+MCP_LOGS_ENABLED=true
+MCP_LOGS_ENDPOINT=http://mock-ops:8081/mcp/logs/query
+```
+
+Then run:
+
+```bash
+docker compose up -d --build
+curl -X POST http://localhost:8080/api/operations/sync
+```
+
+On the website, the Operations Agent panel should show `Prometheus` and `MCP logs` enabled. After sync, recent runs should show `SUCCESS · 1` for Prometheus and `SUCCESS · 2` for MCP logs. The indexed snapshots also appear in the Knowledge Base and can be cited by chat answers.
+
 ## Notes
 
 - Never put GitHub passwords, OpenAI keys, or production database passwords in this repo. Use environment variables, GitHub PATs, or SSH keys.
